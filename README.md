@@ -16,7 +16,7 @@ How to
 
 - Runs on Python 2.7, using native libraries
 - Import the mailPI_conf library for configuration data
-  
+
 - Provide the DNS IP in mailPI_conf (*DNSIP* variable)
 - If wanted/required, change the fake address used to communicate with the MX (*FAKADDR* variable)
 - Provide the targeted addresses in mailPI itself (*MAILADDRS* variable)
