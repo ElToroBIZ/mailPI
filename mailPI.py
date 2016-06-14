@@ -231,61 +231,72 @@ def extract_answers(answer,answercount):
 
 ## MAIN
 
+socket.setdefaulttimeout(conf.SKTTIMEOUT) # configure a timeout for the socket module
+domainmx = {} # cache the queried domain in case of multiple addresses in the same domain
+
 for mailaddr in MAILADDRS:
 
     print mailaddr
-
-    answers = []
-    maildomain = mailaddr.split('@')[1] # account@domainname -> domainname
-    transid, msg = gen_dnsquestion(maildomain)
-    transid = ''.join([chr(int(transid[x*8:(x+1)*8],2)) for x in range(len(transid)/8)])
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #connecting in IP/UDP
-    try:
-        sock.sendto(msg, (DNSIP, DNSPORT)) # to the DNS, asking for the mx of the domain
-        data, server = sock.recvfrom(2048)
-    except Exception as e:
-        # connectivity issue, DNSIP issue, DNSPORT issue, probably
-        print '\terror: socket to '+DNSIP+' on port '+str(DNSPORT)+' in UDP'
-        print '\terror: '+str(e)
-        break
-    finally:
-        sock.close()
-
-    dnsheader = data[:12]
-    okayheader,answercount = check_answerhdr(dnsheader, transid)
-    if okayheader:
-        dnsanswer = data[12:]
-        okayquery = check_query(dnsanswer, maildomain)
-        if okayquery:
-            answers = extract_answers(dnsanswer,answercount)
-
-            mx = random.choice(answers)
-            port = '25'
-
-            tn = telnetlib.Telnet()
-            # let's have a chat with the mx
-            tn.open(mx,port)
-            tn.read_until('\n')
-            tn.write('HELO '+FAKADDR.split('@')[1]+'\r\n')
-            tn.read_until('\n')
-            tn.write('MAIL FROM:<'+FAKADDR+'>\r\n')
-            tn.read_until('\n')
-            tn.write('RCPT TO:<'+mailaddr+'>\r\n')
-
-            mxanswer = tn.read_until('\n')
-            tn.close()
-
-            if mxanswer[:3] == '250':
-                print '\t'+mailaddr+': EXISTS (according to '+mx+')'
-            elif mxanswer[:3] == '550':
-                print '\t'+mailaddr+': NOT EXIST (according to '+mx+')'
-            else:
-                print '\t'+mailaddr+' with '+mx
-                print '\terror: '+mxanswer
-        else:
-            print '\twarning: answer may have been compromised (not okayquery)'
-    else:
-        print '\twarning: no valid MX answer(not okayheader)'
     
+    maildomain = mailaddr.split('@')[1] # account@domainname -> domainname
+
+    if maildomain not in domainmx:
+        answers = []
+        transid, msg = gen_dnsquestion(maildomain)
+        transid = ''.join([chr(int(transid[x*8:(x+1)*8],2)) for x in range(len(transid)/8)])
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #connecting in IP/UDP
+        try:
+            sock.sendto(msg, (DNSIP, DNSPORT)) # to the DNS, asking for the mx of the domain
+            data, server = sock.recvfrom(2048)
+        except Exception as e:
+            # connectivity issue, DNSIP issue, DNSPORT issue, probably
+            print '\terror: socket to '+DNSIP+' on port '+str(DNSPORT)+' in UDP'
+            print '\terror: '+str(e)
+            break
+        finally:
+            sock.close()
+
+        dnsheader = data[:12]
+        okayheader,answercount = check_answerhdr(dnsheader, transid)
+        if okayheader:
+            dnsanswer = data[12:]
+            okayquery = check_query(dnsanswer, maildomain)
+            if okayquery:
+                answers = extract_answers(dnsanswer,answercount)
+                if len(answers)>0:
+                    domainmx[maildomain] = answers
+                else:
+                    domainmx[maildomain] = ['NOPE','Empty answer array (DNS is not forwarding probably)']
+            else:
+                domainmx[maildomain] = ['NOPE','Compromised answer (not okayquery)']
+        else:
+            domainmx[maildomain] = ['NOPE','No valid MX answer (not okayheader)']
+            
+    if domainmx[maildomain][0] != 'NOPE':
+        mx = random.choice(domainmx[maildomain])
+        port = '25'
+
+        tn = telnetlib.Telnet()
+        # let's have a chat with the mx
+        tn.open(mx,port)
+        tn.read_until('\n')
+        tn.write('HELO '+FAKADDR.split('@')[1]+'\r\n')
+        tn.read_until('\n')
+        tn.write('MAIL FROM:<'+FAKADDR+'>\r\n')
+        tn.read_until('\n')
+        tn.write('RCPT TO:<'+mailaddr+'>\r\n')
+
+        mxanswer = tn.read_until('\n')
+        tn.close()
+
+        if mxanswer[:3] == '250':
+            print '\t'+mailaddr+': EXISTS (according to '+mx+')'
+        elif mxanswer[:3] == '550':
+            print '\t'+mailaddr+': NOT EXIST (according to '+mx+')'
+        else:
+            print '\t'+mailaddr+' with '+mx
+            print '\terror: '+mxanswer
+    else:
+        print '\twarning: '+domainmx[maildomain][1]
     print ""
