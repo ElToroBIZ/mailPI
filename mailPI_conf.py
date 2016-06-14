@@ -14,3 +14,6 @@ DNSPORT = 53
 # the address use to communicate with the mx
 # can be nonexistent
 FAKADDR = 'itsme@mar.io'
+
+# timeout value for the socket module
+SKTTIMEOUT = 20
