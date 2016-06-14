@@ -56,7 +56,8 @@ Telling the truth or lying, both sides have good and bad reasons for.
 Todo list
 ---------
 
-- Understand the rare bugs in the answer extraction (answer's domain name and type elements)
+- Manage non-forwarding DNS (extract the new DNS query target and send a new query)
+- Check for other bugs in the answers extraction)
 - Reuse the original query to check the query embedded in the answer
 - Avoid so many conversion between binary/hexa/regular value
 - Optimize the quantity of data provided to the functions
