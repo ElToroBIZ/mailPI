@@ -30,17 +30,17 @@ MAILADDRS = ['lorem@ipsum.com',
 
 # Straight from the RFC
 dns_error = {
-    1:('FormErr','Format Error'),
-    2:('ServFail','Server Failure'),
-    3:('NXDomain','Non-Existent Domain'),
-    4:('NotImp','Not Implemented'),
-    5:('Refused','Query Refused'),
-    6:('YXDomain','Name Exists when it should not'),
-    7:('YXRRSet','RR Set Exists when it should not'),
-    8:('NXRRSet','RR Set that should exist does not'),
-    9:('NotAuth','Server Not Authoritative for zone'),
-    10:('NotAuth','Not Authorized'),
-    11:('NotZone','Name not contained in zone')
+        1:('FormErr', 'Format Error'),
+        2:('ServFail', 'Server Failure'),
+        3:('NXDomain', 'Non-Existent Domain'),
+        4:('NotImp', 'Not Implemented'),
+        5:('Refused', 'Query Refused'),
+        6:('YXDomain', 'Name Exists when it should not'),
+        7:('YXRRSet', 'RR Set Exists when it should not'),
+        8:('NXRRSet', 'RR Set that should exist does not'),
+        9:('NotAuth', 'Server Not Authoritative for zone'),
+        10:('NotAuth', 'Not Authorized'),
+        11:('NotZone', 'Name not contained in zone')
     }
 
 ## FUNCTIONS
@@ -80,13 +80,15 @@ def gen_dnsquestion(domainame):
 
     # dns header
     header = transid+flags+counts # in binary
-    header = ''.join([chr(int(header[x*8:(x+1)*8],2)) for x in range(len(header)/8)])
+    header = ''.join([chr(int(header[x*8:(x+1)*8], 2))
+                      for x in range(len(header)/8)])
 
     # dns question
     dnsquestion = dns_naming(domainame)
     dnsquestion += hex(15)[2:].zfill(4)
     dnsquestion += hex(1)[2:].zfill(4) # 1 for IN (Internet), sorry chaosnet
-    dnsquestion = ''.join([chr(int(dnsquestion[x*2:(x+1)*2],16)) for x in range(len(dnsquestion)/2)])
+    dnsquestion = ''.join([chr(int(dnsquestion[x*2:(x+1)*2], 16))
+                           for x in range(len(dnsquestion)/2)])
 
     return transid, header+dnsquestion
 
@@ -99,7 +101,8 @@ def check_answerhdr(answerhdr, transid):
     if answerhdr[:len(transid)] != transid:
         legit = False
         
-    answerhdr = ''.join([bin(ord(x))[2:].zfill(8) for x in answerhdr[len(transid):]])
+    answerhdr = ''.join([bin(ord(x))[2:].zfill(8)
+                         for x in answerhdr[len(transid):]])
 
     # check QRflag
     if answerhdr[0] != '1':
@@ -109,16 +112,16 @@ def check_answerhdr(answerhdr, transid):
     # check response code
     if answerhdr[12:16] != '0000':
         legit = False
-        errcode = int(answerhdr[12:16],2)
+        errcode = int(answerhdr[12:16], 2)
         if errcode in dns_error:
             print '\terror: response code: '+str(errcode)+'. '+dns_error[errcode][0]+': '+dns_error[errcode][1]
         else:
             print '\terror: response code: '+str(errcode)
 
     # check number of rr in answer
-    ANcount = int(answerhdr[32:48],2)
-    NScount = int(answerhdr[48:54],2)
-    ARcount = int(answerhdr[54:70],2)
+    ANcount = int(answerhdr[32:48], 2)
+    NScount = int(answerhdr[48:54], 2)
+    ARcount = int(answerhdr[54:70], 2)
     if ANcount+NScount+ARcount<1:
         legit = False
         print '\terror: number of answer elements: '+str(ANcount+NScount+ARcount)
@@ -132,7 +135,8 @@ def check_query(answer,maildomain):
     legit = True
 
     empiricdomain = answer.split(chr(0))[0]
-    empiricdomain = ''.join([hex(ord(x))[2:].zfill(2) for x in empiricdomain])+'00'
+    empiricdomain = ''.join([hex(ord(x))[2:].zfill(2)
+                             for x in empiricdomain])+'00'
 
     theoricdomain = dns_naming(maildomain)
 
@@ -167,7 +171,7 @@ def extract_answers(answer,answercount):
             k += 2 # skip the name pointer, although maybe we should care
         else:
             # Warning : bugged at some point, undetermined reasons
-            k = answer.index(chr(0),1)
+            k = answer.index(chr(0), 1)
             k += 1+int(answer[k]) # skip the name, although maybe we should care
         
         # type
